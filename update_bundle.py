@@ -1,4 +1,8 @@
+import datetime
+import hashlib
+import io
 import pathlib
+import shutil
 import typing
 from typing import cast
 
@@ -24,6 +28,9 @@ CACHE_PATH.mkdir(parents=True, exist_ok=True)
 # And we generate one big bundle here
 BUNDLE_PATH = PACKAGE_DIR / "cacert.pem"
 
+# We update the version in this file
+VERSION_FILE = PACKAGE_DIR / "__init__.py"
+
 
 # First fetch all data
 def fetch_to_file(url: str, path: pathlib.Path) -> None:
@@ -32,6 +39,20 @@ def fetch_to_file(url: str, path: pathlib.Path) -> None:
         r.raise_for_status()
         for chunk in r.iter_content(chunk_size=8192):
             f.write(chunk)
+
+
+def hash_file(path: pathlib.Path) -> str:
+    """Returns a simple (md5) hash of the provided path. Used to check whether
+    the file contents have changed.
+    """
+    hash = hashlib.md5()
+    with open(path, "rb") as f:
+        while True:
+            chunk = f.read(hash.block_size)
+            if not chunk:
+                break
+            hash.update(chunk)
+    return hash.hexdigest()
 
 
 def check_certificate_in_cache(
@@ -65,7 +86,7 @@ def fetch_certificates(ctl: CertificateTrustList) -> None:
     """Fetches all certificates in the CertificateTrustList"""
 
     for i, subject in enumerate(ctl.subjects):
-        print(subject.friendly_name, f"{i + 1} / {len(ctl.subjects)}")
+        print(subject.friendly_name[:-1], f"{i + 1} / {len(ctl.subjects)}")
 
         if check_certificate_in_cache(subject.identifier.hex()):
             continue
@@ -96,28 +117,39 @@ def dump_certificate(
 
     f.write(f"# Subject Identifier: {subject.identifier.hex()}\n")
     if subject.friendly_name:
-        f.write(f"# Friendly Name: {subject.friendly_name[:-1]}\n")
+        name = subject.friendly_name[:-1].encode('ascii', 'ignore').decode()
+        if name != subject.friendly_name[:-1]:
+            f.write(f"# Friendly Name (ASCII): {name}\n")
+        else:
+            f.write(f"# Friendly Name: {name}\n")
+
     if subject.extended_key_usages:
         f.write(
             f"# Extended key usages: "
             f"{readable_ekus(subject.extended_key_usages)}\n"
         )
+
     if subject.subject_name_md5:
         f.write(f"# Subject Name MD5: {subject.subject_name_md5.hex()}\n")
+
     if subject.disallowed_filetime:
         f.write(f"# Disallowed Filetime: {subject.disallowed_filetime}\n")
+
     if subject.root_program_chain_policies:
         f.write(
             "# Root Program Chain Policies: "
             f"{readable_ekus(subject.root_program_chain_policies)}\n"
         )
+
     if subject.disallowed_extended_key_usages:
         f.write(
             "# Disallowed extended key usages: "
             f"{readable_ekus(subject.disallowed_extended_key_usages)}\n"
         )
+
     if subject.not_before_filetime:
         f.write(f"# Not before Filetime: {subject.not_before_filetime}\n")
+
     if subject.not_before_extended_key_usages:
         f.write(
             "# Not before extended key usages: "
@@ -128,19 +160,56 @@ def dump_certificate(
     f.write("\n")
 
 
+def patch_version(filename: pathlib.Path = VERSION_FILE) -> None:
+    """Changes the date-based version number in the provided file."""
+    cache = io.StringIO()
+    with open(filename, "r") as f:
+        for line in f:
+            if line.startswith("__version__"):
+                today = datetime.date.today()
+                # write it quite ugly, but this ensures that we do not have
+                # leading zeroes
+                cache.write(
+                    f'__version__ = "{today.year}.{today.month}.{today.day}"\n'
+                )
+            else:
+                cache.write(line)
+    cache.seek(0)
+    with open(filename, "w") as f:
+        shutil.copyfileobj(cache, f)
+
+
 def main() -> None:
+    # Calculate current hash to see if contents have changed
+    if AUTHROOTSTL_PATH.exists():
+        old_hash = hash_file(AUTHROOTSTL_PATH)
+    else:
+        old_hash = ""
+
+    # Download new file and hash
     fetch_to_file(AUTHROOTSTL_URL, AUTHROOTSTL_PATH)
+    new_hash = hash_file(AUTHROOTSTL_PATH)
+
     # let signify parse the CertificateTrustList for us
     ctl = CertificateTrustList.from_stl_file(AUTHROOTSTL_PATH)
     print(f"Fetched CTL file, there are {len(ctl.subjects)} subjects")
 
+    # fetch all certificates to cache
     fetch_certificates(ctl)
     print("Fetched all certificates to cache")
 
+    # dump certificates to bundle
     with open(BUNDLE_PATH, "w", encoding='utf-8') as f:
         for subject in ctl.subjects:
             dump_certificate(f, subject)
     print(f"Dumped certificates to {BUNDLE_PATH}")
+
+    # patch version if needed
+    if old_hash != new_hash:
+        patch_version()
+        print(f"Patched version number in {VERSION_FILE}")
+    else:
+        print("Did not patch version number because contents have not changed.")
 
 
 if __name__ == '__main__':
