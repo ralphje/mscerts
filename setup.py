@@ -23,7 +23,7 @@ if sys.argv[-1] == 'publish':
 setup(
     name='mscerts',
     version=VERSION,
-    description='Python package for providing Mozilla\'s CA Bundle.',
+    description='Python package for providing Microsoft\'s CA Bundle.',
     long_description=open('README.rst').read(),
     author='Ralph Broenink',
     author_email='ralph@ralphbroenink.net',
