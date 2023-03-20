@@ -1,0 +1,39 @@
+name: Update Certificate Bundle
+on:
+  workflow_dispatch: {}
+#  schedule:
+#    - cron: "0 0 * * *"
+
+jobs:
+  update-bundle:
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # using a custom access token to ensure that we can recursively
+          # create a new release
+          token: ${{ secrets.UPDATE_ACCESS_TOKEN }}
+      - name: Cache certificates
+        uses: actions/cache@v3
+        with:
+          path: .cache
+          key: certificate-cache
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r update_requirements.txt
+      - name: Run updater
+        run: python update_bundle.py
+      - name: Get package version
+        run: echo -n "version=$(python setup.py --version)" >> $GITHUB_OUTPUT
+        id: version
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Update bundle to version ${{ steps.version.outputs.version }}
+          file_pattern: "mscerts/cacert.pem mscerts/authroot.stl mscerts/__init__.py"
+          tagging_message: ${{ steps.version.outputs.version }}
