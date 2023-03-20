@@ -15,8 +15,10 @@ if sys.version_info >= (3, 11):
 
     _CACERT_CTX = None
     _CACERT_PATH = None
+    _STL_CTX = None
+    _STL_PATH = None
 
-    def where(stl: bool = False) -> str:
+    def where(*, stl: bool = False) -> str:
         # This is slightly terrible, but we want to delay extracting the file
         # in cases where we're inside of a zipimport situation until someone
         # actually calls where(), but we don't want to re-extract the file
@@ -24,7 +26,10 @@ if sys.version_info >= (3, 11):
         # global variable.
         global _CACERT_CTX
         global _CACERT_PATH
-        if _CACERT_PATH is None:
+        global _STL_CTX
+        global _STL_PATH
+
+        if not stl:
             # This is slightly janky, the importlib.resources API wants you to
             # manage the cleanup of this file, so it doesn't actually return a
             # path, it returns a context manager that will give you the path
@@ -35,14 +40,21 @@ if sys.version_info >= (3, 11):
             # We also have to hold onto the actual context manager, because
             # it will do the cleanup whenever it gets garbage collected, so
             # we will also store that at the global level as well.
-            _CACERT_CTX = as_file(files("mscerts").joinpath(filename(stl)))
-            _CACERT_PATH = str(_CACERT_CTX.__enter__())
-            atexit.register(exit_cacert_ctx)
+            if _CACERT_PATH is None:
+                _CACERT_CTX = as_file(files("mscerts").joinpath(filename(stl)))
+                _CACERT_PATH = str(_CACERT_CTX.__enter__())
+                atexit.register(exit_cacert_ctx)
 
-        return _CACERT_PATH
+            return _CACERT_PATH
+        else:
+            if _STL_PATH is None:
+                _STL_CTX = as_file(files("mscerts").joinpath(filename(stl)))
+                _STL_PATH = str(_STL_CTX.__enter__())
 
-    def contents(stl: bool = False) -> str:
-        return files("mscerts").joinpath(filename(stl)).read_text(encoding="ascii")
+            return _STL_PATH
+
+    def contents() -> str:
+        return files("mscerts").joinpath(filename()).read_text(encoding="ascii")
 
 elif sys.version_info >= (3, 7):
 
@@ -50,8 +62,10 @@ elif sys.version_info >= (3, 7):
 
     _CACERT_CTX = None
     _CACERT_PATH = None
+    _STL_CTX = None
+    _STL_PATH = None
 
-    def where(stl: bool = False) -> str:
+    def where(*, stl: bool = False) -> str:
         # This is slightly terrible, but we want to delay extracting the
         # file in cases where we're inside of a zipimport situation until
         # someone actually calls where(), but we don't want to re-extract
@@ -59,7 +73,10 @@ elif sys.version_info >= (3, 7):
         # it in a global variable.
         global _CACERT_CTX
         global _CACERT_PATH
-        if _CACERT_PATH is None:
+        global _STL_CTX
+        global _STL_PATH
+
+        if not stl:
             # This is slightly janky, the importlib.resources API wants you
             # to manage the cleanup of this file, so it doesn't actually
             # return a path, it returns a context manager that will give
@@ -71,14 +88,21 @@ elif sys.version_info >= (3, 7):
             # We also have to hold onto the actual context manager, because
             # it will do the cleanup whenever it gets garbage collected, so
             # we will also store that at the global level as well.
-            _CACERT_CTX = get_path("mscerts", filename(stl))
-            _CACERT_PATH = str(_CACERT_CTX.__enter__())
-            atexit.register(exit_cacert_ctx)
+            if _CACERT_PATH is None:
+                _CACERT_CTX = get_path("mscerts", filename(stl))
+                _CACERT_PATH = str(_CACERT_CTX.__enter__())
+                atexit.register(exit_cacert_ctx)
 
-        return _CACERT_PATH
+            return _CACERT_PATH
+        else:
+            if _STL_PATH is None:
+                _STL_CTX = get_path("mscerts", filename(stl))
+                _STL_PATH = str(_STL_CTX.__enter__())
 
-    def contents(stl: bool = False) -> str:
-        return read_text("mscerts", filename(stl), encoding="ascii")
+            return _STL_PATH
+
+    def contents() -> str:
+        return read_text("mscerts", filename(), encoding="ascii")
 
 else:
     import os
@@ -103,10 +127,10 @@ else:
 
     # If we don't have importlib.resources, then we will just do the old logic
     # of assuming we're on the filesystem and munge the path directly.
-    def where(stl: bool = False) -> str:
+    def where(*, stl: bool = False) -> str:
         f = os.path.dirname(__file__)
 
         return os.path.join(f, filename(stl))
 
-    def contents(stl: bool = False) -> str:
-        return read_text("certifi", filename(stl), encoding="ascii")
+    def contents() -> str:
+        return read_text("certifi", filename(), encoding="ascii")
