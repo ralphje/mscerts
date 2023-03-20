@@ -14,7 +14,7 @@ except ImportError:
 
 
 version_regex = r'__version__ = ["\']([^"\']*)["\']'
-with open("certifi/__init__.py") as f:
+with open("mscerts/__init__.py") as f:
     text = f.read()
     match = re.search(version_regex, text)
 
@@ -24,20 +24,22 @@ with open("certifi/__init__.py") as f:
         raise RuntimeError("No version number found!")
 
 setup(
-    name="certifi",
+    name='mscerts',
     version=VERSION,
-    description="Python package for providing Mozilla's CA Bundle.",
+    description="Python package for providing Microsoft's CA Bundle.",
     long_description=open("README.rst").read(),
-    author="Kenneth Reitz",
-    author_email="me@kennethreitz.com",
-    url="https://github.com/certifi/python-certifi",
+    author="Ralph Broenink",
+    author_email="ralph@ralphbroenink.net",
+    url="https://github.com/ralphje/mscerts",
     packages=[
-        "certifi",
+        "mscerts",
     ],
-    package_dir={"certifi": "certifi"},
-    package_data={"certifi": ["*.pem", "py.typed"]},
-    # data_files=[('certifi', ['certifi/cacert.pem'])],
+    package_dir={"mscerts": "mscerts"},
+    package_data={"mscerts": ["*.pem", "*.stl", "py.typed"]},
     include_package_data=True,
+    extras_require={
+        "stlupdate": ["requests", "signify", "asn1crypto"],
+    },
     zip_safe=False,
     license="MPL-2.0",
     python_requires=">=3.6",
@@ -59,6 +61,6 @@ setup(
         "Programming Language :: Python :: 3.13",
     ],
     project_urls={
-        "Source": "https://github.com/certifi/python-certifi",
+        "Source": "https://github.com/ralphje/mscerts",
     },
 )

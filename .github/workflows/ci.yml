@@ -10,8 +10,7 @@ permissions:
 
 jobs:
   mypy:
-    runs-on: ubuntu-20.04
-
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up Python
@@ -19,14 +18,13 @@ jobs:
       - name: Install dependencies
         run: pip install mypy
       - name: Run mypy
-        run: mypy --strict certifi
+        run: mypy --strict mscerts
 
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         python-version:
-        - "3.6"
         - "3.7"
         - "3.8"
         - "3.9"
