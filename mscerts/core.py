@@ -1,10 +1,8 @@
-"""
-certifi.py
-~~~~~~~~~~
-
-This module returns the installation location of cacert.pem or its contents.
-"""
 import sys
+
+
+def filename(stl: bool = False) -> str:
+    return "cacert.pem" if not stl else "authroot.stl"
 
 
 if sys.version_info >= (3, 11):
@@ -14,7 +12,7 @@ if sys.version_info >= (3, 11):
     _CACERT_CTX = None
     _CACERT_PATH = None
 
-    def where() -> str:
+    def where(stl: bool = False) -> str:
         # This is slightly terrible, but we want to delay extracting the file
         # in cases where we're inside of a zipimport situation until someone
         # actually calls where(), but we don't want to re-extract the file
@@ -33,13 +31,13 @@ if sys.version_info >= (3, 11):
             # We also have to hold onto the actual context manager, because
             # it will do the cleanup whenever it gets garbage collected, so
             # we will also store that at the global level as well.
-            _CACERT_CTX = as_file(files("certifi").joinpath("cacert.pem"))
+            _CACERT_CTX = as_file(files("mscerts").joinpath(filename(stl)))
             _CACERT_PATH = str(_CACERT_CTX.__enter__())
 
         return _CACERT_PATH
 
-    def contents() -> str:
-        return files("certifi").joinpath("cacert.pem").read_text(encoding="ascii")
+    def contents(stl: bool = False) -> str:
+        return files("mscerts").joinpath(filename(stl)).read_text(encoding="ascii")
 
 elif sys.version_info >= (3, 7):
 
@@ -48,7 +46,7 @@ elif sys.version_info >= (3, 7):
     _CACERT_CTX = None
     _CACERT_PATH = None
 
-    def where() -> str:
+    def where(stl: bool = False) -> str:
         # This is slightly terrible, but we want to delay extracting the
         # file in cases where we're inside of a zipimport situation until
         # someone actually calls where(), but we don't want to re-extract
@@ -68,13 +66,13 @@ elif sys.version_info >= (3, 7):
             # We also have to hold onto the actual context manager, because
             # it will do the cleanup whenever it gets garbage collected, so
             # we will also store that at the global level as well.
-            _CACERT_CTX = get_path("certifi", "cacert.pem")
+            _CACERT_CTX = get_path("mscerts", filename(stl))
             _CACERT_PATH = str(_CACERT_CTX.__enter__())
 
         return _CACERT_PATH
 
-    def contents() -> str:
-        return read_text("certifi", "cacert.pem", encoding="ascii")
+    def contents(stl: bool = False) -> str:
+        return read_text("mscerts", filename(stl), encoding="ascii")
 
 else:
     import os
@@ -99,10 +97,10 @@ else:
 
     # If we don't have importlib.resources, then we will just do the old logic
     # of assuming we're on the filesystem and munge the path directly.
-    def where() -> str:
+    def where(stl: bool = False) -> str:
         f = os.path.dirname(__file__)
 
-        return os.path.join(f, "cacert.pem")
+        return os.path.join(f, filename(stl))
 
-    def contents() -> str:
-        return read_text("certifi", "cacert.pem", encoding="ascii")
+    def contents(stl: bool = False) -> str:
+        return read_text("certifi", filename(stl), encoding="ascii")

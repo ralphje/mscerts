@@ -3,20 +3,11 @@ import re
 import os
 import sys
 
-# While I generally consider it an antipattern to try and support both
-# setuptools and distutils with a single setup.py, in this specific instance
-# where certifi is a dependency of setuptools, it can create a circular
-# dependency when projects attempt to unbundle stuff from setuptools and pip.
-# Though we don't really support that, it makes things easier if we do this and
-# should hopefully cause less issues for end users.
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+from setuptools import setup
 
 
 version_regex = r'__version__ = ["\']([^"\']*)["\']'
-with open('certifi/__init__.py') as f:
+with open('mscerts/__init__.py') as f:
     text = f.read()
     match = re.search(version_regex, text)
 
@@ -30,20 +21,22 @@ if sys.argv[-1] == 'publish':
     sys.exit()
 
 setup(
-    name='certifi',
+    name='mscerts',
     version=VERSION,
     description='Python package for providing Mozilla\'s CA Bundle.',
     long_description=open('README.rst').read(),
-    author='Kenneth Reitz',
-    author_email='me@kennethreitz.com',
-    url='https://github.com/certifi/python-certifi',
+    author='Ralph Broenink',
+    author_email='ralph@ralphbroenink.net',
+    url='https://github.com/ralphje/mscerts',
     packages=[
-        'certifi',
+        'mscerts',
     ],
-    package_dir={'certifi': 'certifi'},
-    package_data={'certifi': ['*.pem', 'py.typed']},
-    # data_files=[('certifi', ['certifi/cacert.pem'])],
+    package_dir={'mscerts': 'mscerts'},
+    package_data={'mscerts': ['*.pem', '*.stl', 'py.typed']},
     include_package_data=True,
+    extras_require={
+        "stlupdate": ["requests", "signify", "asn1crypto"],
+    },
     zip_safe=False,
     license='MPL-2.0',
     python_requires=">=3.6",
@@ -63,6 +56,6 @@ setup(
         'Programming Language :: Python :: 3.11',
     ],
     project_urls={
-        'Source': 'https://github.com/certifi/python-certifi',
+        'Source': 'https://github.com/ralphje/mscerts',
     },
 )
