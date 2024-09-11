@@ -93,19 +93,6 @@ def fetch_certificates(ctl: CertificateTrustList) -> None:
         fetch_certificate(subject.identifier.hex())
 
 
-def readable_eku(eku: tuple[int, ...]) -> str:
-    """Utility function to ensure that the EKU is made as readible as possible.
-    """
-
-    dotted = ".".join(map(str, eku))
-    return cast(dict[str, str], KeyPurposeId._map).get(dotted, dotted)
-
-
-def readable_ekus(ekus: list[tuple[int, ...]]) -> list[str]:
-    """Utility function to convert all EKUs in a list with readable_eku."""
-    return [readable_eku(x) for x in ekus]
-
-
 def dump_certificate(
     f: typing.TextIO,
     subject: CertificateTrustSubject,
@@ -117,16 +104,15 @@ def dump_certificate(
 
     f.write(f"# Subject Identifier: {subject.identifier.hex()}\n")
     if subject.friendly_name:
-        name = subject.friendly_name[:-1].encode('ascii', 'ignore').decode()
-        if name != subject.friendly_name[:-1]:
+        name = subject.friendly_name.encode('ascii', 'ignore').decode()
+        if name != subject.friendly_name:
             f.write(f"# Friendly Name (ASCII): {name}\n")
         else:
             f.write(f"# Friendly Name: {name}\n")
 
     if subject.extended_key_usages:
         f.write(
-            f"# Extended key usages: "
-            f"{readable_ekus(subject.extended_key_usages)}\n"
+            f"# Extended key usages: {subject.extended_key_usages}\n"
         )
 
     if subject.subject_name_md5:
@@ -138,13 +124,13 @@ def dump_certificate(
     if subject.root_program_chain_policies:
         f.write(
             "# Root Program Chain Policies: "
-            f"{readable_ekus(subject.root_program_chain_policies)}\n"
+            f"{subject.root_program_chain_policies}\n"
         )
 
     if subject.disallowed_extended_key_usages:
         f.write(
             "# Disallowed extended key usages: "
-            f"{readable_ekus(subject.disallowed_extended_key_usages)}\n"
+            f"{subject.disallowed_extended_key_usages}\n"
         )
 
     if subject.not_before_filetime:
@@ -153,7 +139,7 @@ def dump_certificate(
     if subject.not_before_extended_key_usages:
         f.write(
             "# Not before extended key usages: "
-            f"{readable_ekus(subject.not_before_extended_key_usages)}\n"
+            f"{subject.not_before_extended_key_usages}\n"
         )
 
     f.write(certificate_body)
