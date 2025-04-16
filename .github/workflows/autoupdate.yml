@@ -6,7 +6,8 @@ on:
 
 jobs:
   update-bundle:
-    runs-on: ubuntu-20.04
+    # Pin to version 22.04 due to wbond/oscrypto#78
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
     steps:

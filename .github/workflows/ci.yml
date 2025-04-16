@@ -22,7 +22,8 @@ jobs:
         run: mypy --strict mscerts
 
   test:
-    runs-on: ubuntu-20.04
+    # Pin to version 22.04 due to wbond/oscrypto#78
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         python-version:
