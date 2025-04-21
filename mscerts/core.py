@@ -1,4 +1,8 @@
 import sys
+import atexit
+
+def exit_cacert_ctx() -> None:
+    _CACERT_CTX.__exit__(None, None, None)  # type: ignore[union-attr]
 
 
 def filename(stl: bool = False) -> str:
@@ -39,6 +43,7 @@ if sys.version_info >= (3, 11):
             if _CACERT_PATH is None:
                 _CACERT_CTX = as_file(files("mscerts").joinpath(filename(stl)))
                 _CACERT_PATH = str(_CACERT_CTX.__enter__())
+                atexit.register(exit_cacert_ctx)
 
             return _CACERT_PATH
         else:
@@ -86,6 +91,7 @@ elif sys.version_info >= (3, 7):
             if _CACERT_PATH is None:
                 _CACERT_CTX = get_path("mscerts", filename(stl))
                 _CACERT_PATH = str(_CACERT_CTX.__enter__())
+                atexit.register(exit_cacert_ctx)
 
             return _CACERT_PATH
         else:
