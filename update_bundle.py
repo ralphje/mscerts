@@ -4,12 +4,10 @@ import io
 import pathlib
 import shutil
 import typing
-from typing import cast
 
 import requests
 import asn1crypto.pem
-from asn1crypto.x509 import KeyPurposeId
-from signify.authenticode.authroot import CertificateTrustList, \
+from signify.authenticode.trust_list import CertificateTrustList, \
     CertificateTrustSubject
 
 PACKAGE_DIR = pathlib.Path(__file__).resolve().parent / "mscerts"
@@ -86,7 +84,7 @@ def fetch_certificates(ctl: CertificateTrustList) -> None:
     """Fetches all certificates in the CertificateTrustList"""
 
     for i, subject in enumerate(ctl.subjects):
-        print(subject.friendly_name[:-1], f"{i + 1} / {len(ctl.subjects)}")
+        print(subject.friendly_name, f"{i + 1} / {len(list(ctl.subjects))}")
 
         if check_certificate_in_cache(subject.identifier.hex()):
             continue
@@ -178,7 +176,16 @@ def main() -> None:
 
     # let signify parse the CertificateTrustList for us
     ctl = CertificateTrustList.from_stl_file(AUTHROOTSTL_PATH)
-    print(f"Fetched CTL file, there are {len(ctl.subjects)} subjects")
+    print(f"Fetched CTL file, there are {len(list(ctl.subjects))} subjects")
+
+    # Verify CTL is valid
+    try:
+        ctl.verify()
+    except Exception:
+        print("CTL verification failed")
+        raise
+    else:
+        print("CTL verification successful")
 
     # fetch all certificates to cache
     fetch_certificates(ctl)
