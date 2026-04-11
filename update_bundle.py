@@ -178,9 +178,15 @@ def main() -> None:
     ctl = CertificateTrustList.from_stl_file(AUTHROOTSTL_PATH)
     print(f"Fetched CTL file, there are {len(list(ctl.subjects))} subjects")
 
-    # Verify CTL is valid
+    # Verify CTL is valid. Use the update's timestamp to ensure that we have a valid context, if we are not expecting
+    # a next update yet. This is to work around the fact that Microsoft can let the authroot expire (early 2026).
+    if not ctl.next_update or ctl.next_update > datetime.datetime.now(tz=datetime.timezone.utc):
+        context = {"timestamp": ctl.this_update}
+    else:
+        context = {}
+
     try:
-        ctl.verify()
+        ctl.verify(verification_context_kwargs=context)
     except Exception:
         print("CTL verification failed")
         raise
